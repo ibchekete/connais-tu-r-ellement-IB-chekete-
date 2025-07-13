@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz IB Chékété</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #f5f5f5, #d0f0ff);
+      padding: 20px;
+    }
+    .avatar-selection img {
+      width: 60px;
+      height: 60px;
+      margin: 5px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+    .avatar-selection img.selected {
+      border-color: #3498db;
+    }
+    #quiz, #result, #question-container, #leaderboard-container {
+      display: none;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .question {
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    .option {
+      margin: 5px 0;
+    }
+    #leaderboard {
+      margin-top: 20px;
+      background-color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .player-entry {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .player-entry img {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Quiz : Connais-tu réellement IB Chékété ?</h2>
+
+  <div id="start">
+    <label>Pseudo : <input type="text" id="username"></label><br><br>
+    <label>Mot de passe : <input type="password" id="password"></label><br><br>
+    <div>
+      Choisis un avatar :
+      <div class="avatar-selection" id="avatarSelection"></div>
+      ou <input type="file" id="customAvatar" accept="image/*" />
+    </div>
+    <br>
+    <button onclick="validateAccess()">Commencer</button>
+    <p id="error" style="color:red"></p>
+  </div>
+
+  <div id="quiz">
+    <div id="timer"></div>
+    <div id="question-container">
+      <p id="question" class="question"></p>
+      <div id="options"></div>
+      <button onclick="nextQuestion()">Suivant</button>
+    </div>
+  </div>
+
+  <div id="result">
+    <h3>Quiz terminé !</h3>
+    <p id="score"></p>
+    <p id="percent"></p>
+    <p id="timeTaken"></p>
+  </div>
+
+  <div id="leaderboard-container">
+    <h3>Classement</h3>
+    <div id="leaderboard"></div>
+  </div>
+
+  <script>
+    const PASSWORD = "56DD@ib57FR58";
+    const TIME_LIMIT = 20;
+    const avatars = ["😃", "🥳", "🚀", "🌟"];
+    let selectedAvatar = avatars[0];
+
+    const questions = [
+      { question: "Quel est le nom complet de chekété ?", options: ["A", "B", "C", "D"], answer: 3 },
+      { question: "Quel âge a chekété ?", options: ["20", "21", "22", "23"], answer: 2 }
+    ];
+
+    const leaderboard = [];
+    let currentQuestion = 0, score = 0, timer, timeLeft, startTime;
+
+    function initAvatarSelection() {
+      const container = document.getElementById("avatarSelection");
+      avatars.forEach(av => {
+        const img = document.createElement("div");
+        img.innerText = av;
+        img.style.display = "inline-block";
+        img.style.fontSize = "40px";
+        img.classList.add("emoji-avatar");
+        img.onclick = () => {
+          document.querySelectorAll('.emoji-avatar').forEach(el => el.style.border = 'none');
+          img.style.border = "2px solid blue";
+          selectedAvatar = av;
+        };
+        container.appendChild(img);
+      });
+    }
+
+    initAvatarSelection();
+
+    function validateAccess() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const fileInput = document.getElementById("customAvatar");
+
+      if (!username || !password) {
+        document.getElementById("error").innerText = "Veuillez entrer le pseudo et mot de passe.";
+        return;
+      }
+      if (password !== PASSWORD) {
+        document.getElementById("error").innerText = "Mot de passe incorrect.";
+        return;
+      }
+
+      if (fileInput.files.length > 0) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          selectedAvatar = `<img src='${e.target.result}' width='30' height='30' style='border-radius:50%'>`;
+          launchQuiz(username);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        selectedAvatar = `<span style='font-size:24px'>${selectedAvatar}</span>`;
+        launchQuiz(username);
+      }
+    }
+
+    function launchQuiz(username) {
+      document.getElementById("start").style.display = "none";
+      document.getElementById("quiz").style.display = "block";
+      document.getElementById("leaderboard-container").style.display = "block";
+      startTime = Date.now();
+      showQuestion();
+    }
+
+    function showQuestion() {
+      if (currentQuestion >= questions.length) {
+        endQuiz();
+        return;
+      }
+      const q = questions[currentQuestion];
+      document.getElementById("question").innerText = q.question;
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+      q.options.forEach((opt, i) => {
+        const div = document.createElement("div");
+        div.className = "option";
+        div.innerHTML = `<label><input type='radio' name='option' value='${i}'> ${opt}</label>`;
+        optionsDiv.appendChild(div);
+      });
+      document.getElementById("question-container").style.display = "block";
+      startTimer();
+    }
+
+    function startTimer() {
+      timeLeft = TIME_LIMIT;
+      document.getElementById("timer").innerText = `Temps restant : ${timeLeft}s`;
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").innerText = `Temps restant : ${timeLeft}s`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          nextQuestion();
+        }
+      }, 1000);
+    }
+
+    function nextQuestion() {
+      clearInterval(timer);
+      const selected = document.querySelector("input[name='option']:checked");
+      if (selected && parseInt(selected.value) === questions[currentQuestion].answer) {
+        score++;
+      }
+      currentQuestion++;
+      showQuestion();
+    }
+
+    function endQuiz() {
+      const username = document.getElementById("username").value.trim();
+      const duration = Math.round((Date.now() - startTime) / 1000);
+      const percent = Math.round((score / questions.length) * 100);
+
+      document.getElementById("quiz").style.display = "none";
+      document.getElementById("result").style.display = "block";
+      document.getElementById("score").innerText = `${username}, tu as obtenu ${score} / ${questions.length}`;
+      document.getElementById("percent").innerText = `Taux de réussite : ${percent}%`;
+      document.getElementById("timeTaken").innerText = `Temps pris : ${duration} secondes`;
+
+      leaderboard.push({ name: username, avatar: selectedAvatar, score, duration });
+      updateLeaderboard();
+    }
+
+    function updateLeaderboard() {
+      leaderboard.sort((a, b) => b.score - a.score || a.duration - b.duration);
+      const lbDiv = document.getElementById("leaderboard");
+      lbDiv.innerHTML = "";
+      leaderboard.forEach(player => {
+        const div = document.createElement("div");
+        div.className = "player-entry";
+        div.innerHTML = `${player.avatar} <strong>${player.name}</strong> - ${player.score} pts en ${player.duration}s`;
+        lbDiv.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
